@@ -6,8 +6,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define NET_LATENCY_SCHEMA_BENCH "net_latency_lab/1"
-#define NET_LATENCY_SCHEMA_MANIFEST "net_latency_lab_manifest/1"
+#define NET_LATENCY_SCHEMA_BENCH "net_latency_lab/2"
+#define NET_LATENCY_SCHEMA_MANIFEST "net_latency_lab_manifest/2"
+#define NET_LATENCY_HIST_BUCKETS 12
 
 typedef struct {
   uint64_t warmup;
@@ -16,18 +17,25 @@ typedef struct {
   uint16_t port;
   const char *bind_addr;
   const char *connect_addr;
+  int tcp_nodelay;
+  int sndbuf;
+  int rcvbuf;
+  uint32_t clients;
+  int pin_cpu;
 } bench_config_t;
 
 typedef struct {
   double p50_ns;
   double p95_ns;
   double p99_ns;
+  double p999_ns;
   double mean_ns;
   double stdev_ns;
   double min_ns;
   double max_ns;
   uint64_t samples;
   uint64_t failures;
+  uint64_t histogram[NET_LATENCY_HIST_BUCKETS];
 } latency_stats_t;
 
 uint64_t monotonic_ns(void);
@@ -37,6 +45,7 @@ int run_selftest(void);
 int run_tcp_latency_bench(const bench_config_t *cfg, const char *json_path);
 int run_udp_latency_bench(const bench_config_t *cfg, const char *json_path);
 int run_sctp_latency_bench(const bench_config_t *cfg, const char *json_path);
+int run_serve(const char *proto, const bench_config_t *cfg);
 
 int write_platform_manifest(const char *output_path);
 
