@@ -62,6 +62,25 @@ static int echo_full(int fd, uint8_t *buf, size_t len)
   return 0;
 }
 
+typedef struct {
+  int fd;
+  size_t msg_len;
+} stream_client_ctx_t;
+
+static void *stream_client_worker(void *arg)
+{
+  stream_client_ctx_t *ctx = arg;
+  uint8_t buf[65536];
+  while (!g_net_server_stop) {
+    if (echo_full(ctx->fd, buf, ctx->msg_len) != 0) {
+      break;
+    }
+  }
+  close(ctx->fd);
+  free(ctx);
+  return NULL;
+}
+
 int server_run_tcp(uint16_t port, const char *bind_addr, uint32_t payload_bytes)
 {
   int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -79,10 +98,12 @@ int server_run_tcp(uint16_t port, const char *bind_addr, uint32_t payload_bytes)
     close(listen_fd);
     return -1;
   }
-  if (listen(listen_fd, 1) < 0) {
+  if (listen(listen_fd, 32) < 0) {
     close(listen_fd);
     return -1;
   }
+
+  size_t msg_len = bench_payload_len(payload_bytes);
 
   while (!g_net_server_stop) {
     struct timeval tv = {.tv_sec = 0, .tv_usec = 200000};
@@ -92,14 +113,20 @@ int server_run_tcp(uint16_t port, const char *bind_addr, uint32_t payload_bytes)
       continue;
     }
     set_recv_timeout_ms(client, 500);
-    size_t msg_len = bench_payload_len(payload_bytes);
-    uint8_t buf[65536];
-    while (!g_net_server_stop) {
-      if (echo_full(client, buf, msg_len) != 0) {
-        break;
-      }
+    stream_client_ctx_t *ctx = malloc(sizeof(*ctx));
+    if (!ctx) {
+      close(client);
+      continue;
     }
-    close(client);
+    ctx->fd = client;
+    ctx->msg_len = msg_len;
+    pthread_t worker;
+    if (pthread_create(&worker, NULL, stream_client_worker, ctx) != 0) {
+      close(client);
+      free(ctx);
+      continue;
+    }
+    pthread_detach(worker);
   }
   close(listen_fd);
   return 0;
@@ -162,10 +189,12 @@ int server_run_sctp(uint16_t port, const char *bind_addr, uint32_t payload_bytes
     close(fd);
     return -1;
   }
-  if (listen(fd, 1) < 0) {
+  if (listen(fd, 32) < 0) {
     close(fd);
     return -1;
   }
+
+  size_t msg_len = bench_payload_len(payload_bytes);
 
   while (!g_net_server_stop) {
     struct timeval tv = {.tv_sec = 0, .tv_usec = 200000};
@@ -175,14 +204,20 @@ int server_run_sctp(uint16_t port, const char *bind_addr, uint32_t payload_bytes
       continue;
     }
     set_recv_timeout_ms(client, 500);
-    size_t msg_len = bench_payload_len(payload_bytes);
-    uint8_t buf[65536];
-    while (!g_net_server_stop) {
-      if (echo_full(client, buf, msg_len) != 0) {
-        break;
-      }
+    stream_client_ctx_t *ctx = malloc(sizeof(*ctx));
+    if (!ctx) {
+      close(client);
+      continue;
     }
-    close(client);
+    ctx->fd = client;
+    ctx->msg_len = msg_len;
+    pthread_t worker;
+    if (pthread_create(&worker, NULL, stream_client_worker, ctx) != 0) {
+      close(client);
+      free(ctx);
+      continue;
+    }
+    pthread_detach(worker);
   }
   close(fd);
   return 0;
