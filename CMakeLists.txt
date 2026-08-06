@@ -16,9 +16,11 @@ add_executable(net_latency_lab
   src/stats.c
   src/manifest.c
   src/json_out.c
+  src/socket_tuning.c
   src/tcp_bench.c
   src/udp_bench.c
   src/server.c
+  src/serve.c
 )
 
 target_include_directories(net_latency_lab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -11,13 +11,21 @@ static void usage(const char *prog)
           "Usage:\n"
           "  %s selftest\n"
           "  %s manifest --output path.json\n"
-          "  %s bench tcp|udp|sctp --output path.json [--port N] [--iterations N] [--warmup N] [--payload N]\n",
+          "  %s serve tcp|udp|sctp [--port N] [--payload N] [--bind ADDR]\n"
+          "  %s bench tcp|udp|sctp --output path.json [options]\n"
+          "\n"
+          "Bench options:\n"
+          "  --port N --iterations N --warmup N --payload N\n"
+          "  --connect ADDR --bind ADDR\n"
+          "  --tcp-nodelay 0|1 --sndbuf N --rcvbuf N\n"
+          "  --clients N --pin-cpu N\n",
+          prog,
           prog,
           prog,
           prog);
 }
 
-static void default_cfg(bench_config_t *cfg)
+void default_cfg(bench_config_t *cfg)
 {
   *cfg = (bench_config_t){
       .warmup = 20,
@@ -26,7 +34,45 @@ static void default_cfg(bench_config_t *cfg)
       .port = 19091,
       .bind_addr = "127.0.0.1",
       .connect_addr = "127.0.0.1",
+      .tcp_nodelay = -1,
+      .sndbuf = 0,
+      .rcvbuf = 0,
+      .clients = 1,
+      .pin_cpu = -1,
   };
+}
+
+static int parse_common(int argc, char **argv, int start, bench_config_t *cfg)
+{
+  for (int i = start; i < argc; i++) {
+    if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
+      cfg->port = (uint16_t)atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--iterations") == 0 && i + 1 < argc) {
+      cfg->iterations = (uint64_t)strtoull(argv[++i], NULL, 10);
+    } else if (strcmp(argv[i], "--warmup") == 0 && i + 1 < argc) {
+      cfg->warmup = (uint64_t)strtoull(argv[++i], NULL, 10);
+    } else if (strcmp(argv[i], "--payload") == 0 && i + 1 < argc) {
+      cfg->payload_bytes = (uint32_t)atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--bind") == 0 && i + 1 < argc) {
+      cfg->bind_addr = argv[++i];
+    } else if (strcmp(argv[i], "--connect") == 0 && i + 1 < argc) {
+      cfg->connect_addr = argv[++i];
+    } else if (strcmp(argv[i], "--tcp-nodelay") == 0 && i + 1 < argc) {
+      cfg->tcp_nodelay = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--sndbuf") == 0 && i + 1 < argc) {
+      cfg->sndbuf = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--rcvbuf") == 0 && i + 1 < argc) {
+      cfg->rcvbuf = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--clients") == 0 && i + 1 < argc) {
+      cfg->clients = (uint32_t)atoi(argv[++i]);
+      if (cfg->clients < 1) {
+        cfg->clients = 1;
+      }
+    } else if (strcmp(argv[i], "--pin-cpu") == 0 && i + 1 < argc) {
+      cfg->pin_cpu = atoi(argv[++i]);
+    }
+  }
+  return 0;
 }
 
 int run_selftest(void)
@@ -82,24 +128,24 @@ int main(int argc, char **argv)
     return write_platform_manifest(out);
   }
 
+  bench_config_t cfg;
+  default_cfg(&cfg);
+
+  if (strcmp(argv[1], "serve") == 0 && argc >= 3) {
+    parse_common(argc, argv, 3, &cfg);
+    return run_serve(argv[2], &cfg);
+  }
+
   if (strcmp(argv[1], "bench") == 0 && argc >= 4) {
     const char *proto = argv[2];
     const char *out = NULL;
-    bench_config_t cfg;
     default_cfg(&cfg);
     for (int i = 3; i < argc; i++) {
       if (strcmp(argv[i], "--output") == 0 && i + 1 < argc) {
         out = argv[++i];
-      } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
-        cfg.port = (uint16_t)atoi(argv[++i]);
-      } else if (strcmp(argv[i], "--iterations") == 0 && i + 1 < argc) {
-        cfg.iterations = (uint64_t)strtoull(argv[++i], NULL, 10);
-      } else if (strcmp(argv[i], "--warmup") == 0 && i + 1 < argc) {
-        cfg.warmup = (uint64_t)strtoull(argv[++i], NULL, 10);
-      } else if (strcmp(argv[i], "--payload") == 0 && i + 1 < argc) {
-        cfg.payload_bytes = (uint32_t)atoi(argv[++i]);
       }
     }
+    parse_common(argc, argv, 3, &cfg);
     if (!out) {
       usage(argv[0]);
       return 2;

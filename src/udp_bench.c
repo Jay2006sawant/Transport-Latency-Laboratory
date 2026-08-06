@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: CC-BY-4.0 */
 #include "net_latency_lab.h"
+#include "socket_tuning.h"
 
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -51,6 +52,7 @@ int run_udp_latency_bench(const bench_config_t *cfg, const char *json_path)
     pthread_join(thr, NULL);
     return 1;
   }
+  socket_apply_dgram_client(fd, cfg);
   struct timeval tv = {.tv_sec = 2, .tv_usec = 0};
   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
