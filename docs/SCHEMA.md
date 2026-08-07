@@ -1,13 +1,15 @@
-# JSON schema `net_latency_lab/1`
+# JSON schemas
 
-Bench output is one object per run:
+## Bench `net_latency_lab/2`
 
-| Field | Type | Meaning |
-|-------|------|---------|
-| `schema` | string | `net_latency_lab/1` |
-| `timestamp_utc` | string | ISO-8601 UTC at write time |
-| `protocol` | string | `tcp`, `udp`, or `sctp` |
-| `config` | object | warmup, iterations, payload, addresses, port |
-| `stats` | object | RTT nanoseconds: mean, stdev, min, max, p50, p95, p99, samples, failures |
+Required top-level keys: `schema`, `timestamp_utc`, `protocol`, `config`, `stats`.
 
-Manifest export uses `net_latency_lab_manifest/1` with host CPU, kernel, and endianness.
+`stats` includes mean, stdev, min, max, p50, p95, p99, p99.9 (`p999_ns`), `samples`, `failures`, and `histogram_ns` (12 bucket counts).
+
+Optional `tuning` records CLI socket flags when present.
+
+Schema `net_latency_lab/1` files remain valid for smoke checks; v2 adds histogram and p99.9.
+
+## Manifest `net_latency_lab_manifest/2`
+
+Host metadata: `hostname`, `kernel`, `cpu_model`, `cpufreq_governor`, `uname`, `sysctl_net_core`.
