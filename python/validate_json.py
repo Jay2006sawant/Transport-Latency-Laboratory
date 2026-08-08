@@ -23,6 +23,9 @@ def validate(path: Path) -> list[str]:
         errs.append("no samples")
     if st.get("p50_ns", 0) <= 0:
         errs.append("bad p50")
+    if str(data.get("schema", "")).startswith("net_latency_lab/2"):
+        if "p999_ns" not in st:
+            errs.append("missing p999 in v2")
     return errs
 
 

@@ -1,0 +1,33 @@
+{
+  "outdir": "results/sweep",
+  "cases": [
+    {
+      "protocol": "tcp",
+      "payload_bytes": 64,
+      "iterations": 80,
+      "warmup": 10,
+      "tcp_nodelay": 0
+    },
+    {
+      "protocol": "tcp",
+      "payload_bytes": 64,
+      "iterations": 80,
+      "warmup": 10,
+      "tcp_nodelay": 1
+    },
+    {
+      "protocol": "tcp",
+      "payload_bytes": 1024,
+      "iterations": 80,
+      "warmup": 10,
+      "tcp_nodelay": 1,
+      "clients": 2
+    },
+    {
+      "protocol": "udp",
+      "payload_bytes": 256,
+      "iterations": 80,
+      "warmup": 10
+    }
+  ]
+}
