@@ -23,5 +23,18 @@ if "${BUILD}/net_latency_lab" bench sctp --warmup 5 --iterations 30 --payload 12
   python3 "${ROOT}/python/validate_json.py" "${RESULTS}/smoke_sctp.json"
 fi
 
+python3 "${ROOT}/python/run_sweep.py" "${ROOT}/manifests/default_sweep.json" "${BUILD}/net_latency_lab"
+for f in "${ROOT}/results/sweep"/*.json; do
+  [[ "$f" == *index.json ]] && continue
+  python3 "${ROOT}/python/validate_json.py" "$f"
+done
+
+python3 "${ROOT}/python/compare_runs.py" \
+  "${ROOT}/results/sweep/00_tcp_p64.json" \
+  "${ROOT}/results/sweep/01_tcp_p64.json"
+
+python3 "${ROOT}/python/report_html.py" "${RESULTS}/report.html" \
+  "${BUILD}/smoke_tcp.json" "${RESULTS}/smoke_udp.json"
+
 cp "${BUILD}/smoke_tcp.json" "${RESULTS}/smoke_tcp.json"
 echo "Local CI passed. See ${RESULTS}/"
